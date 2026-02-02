@@ -1,0 +1,28 @@
+{
+  "appId": "com.rubikscube.trainer",
+  "productName": "Rubiks Cube Trainer",
+  "directories": {
+    "output": "release",
+    "buildResources": "public"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "package.json"
+  ],
+  "asar": true,
+  "extraMetadata": {
+    "main": "electron/main.cjs"
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "category": "Education"
+  },
+  "win": {
+    "target": ["nsis", "portable"]
+  },
+  "mac": {
+    "target": ["dmg"],
+    "category": "public.app-category.education"
+  }
+}
