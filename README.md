@@ -24,15 +24,15 @@ chmod +x Rubiks-Cube-Trainer-*.AppImage
 
 ### Windows
 **Option 1: Installer (Recommended)**
-- Download `Rubiks.Cube.Trainer.Setup.*.exe`
+- Download `Rubiks.Cube.Trainer.Setup.*.exe`from [Releases](../../releases/latest)
 - Run the installer and follow the prompts
 
 **Option 2: Portable**
-- Download `Rubiks.Cube.Trainer.*.exe`
+- Download `Rubiks.Cube.Trainer.*.exe` from [Releases](../../releases/latest)
 - Run directly (no installation needed)
 
 ### macOS
-- Download `Rubiks-Cube-Trainer-*-mac.zip`
+- Download `Rubiks-Cube-Trainer-*-mac.zip` from [Releases](../../releases/latest)
 - Extract and drag to Applications folder
 - **Note:** You may need to allow the app in System Preferences → Security & Privacy
 To update:
