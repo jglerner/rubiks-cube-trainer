@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rubiks Cube Trainer</string>
+    <string name="title_activity_main">Rubiks Cube Trainer</string>
+    <string name="package_name">com.rubikscube.trainer</string>
+    <string name="custom_url_scheme">com.rubikscube.trainer</string>
+</resources>
