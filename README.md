@@ -1,4 +1,4 @@
-$ cat README.txt
+
 # 🎲 Rubik's Cube Trainer
 
 📢 **Latest Update (v0.1.0.1):** Native Android performance tuning, improved touch controls, and battery optimization.
