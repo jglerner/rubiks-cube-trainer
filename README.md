@@ -1,18 +1,28 @@
+$ cat README.txt
 # 🎲 Rubik's Cube Trainer
+
+📢 **Latest Update (v0.1.0.1):** Native Android performance tuning, improved touch controls, and battery optimization.
 
 A modern **cross-platform** application for practicing Rubik's Cube with an integrated timer, comprehensive statistics, and 281 trillion unique scrambles.
 
 ## ✨ Features
 
-* **Interactive 3D Cube**: Smooth Three.js visualization with drag/touch-to-rotate
-* **Smart Scrambler**: Generate 2-25 move sequences with unique reproducible IDs
-* **Professional Timer**: Spacebar to start/stop (desktop) or tap buttons (mobile)
-* **Advanced Statistics**: Track ao5, ao12, ao100, DNF, best/worst times
-* **Step-by-Step Mode**: Execute moves one at a time for learning
-* **Persistent History**: All your solves are saved locally
-* **Draggable UI**: Customize your workspace layout (desktop)
-* **Visual Scramble Display**: 2D unfolded cube view
-* **Mobile Optimized**: Responsive design for phones and DAPs
+* **Interactive 3D Cube**: Smooth Three.js visualization with drag/touch-to-rotate 🧊
+* **Smart Scrambler**: Generate 2-25 move sequences with unique reproducible IDs 🔢
+* **Professional Timer**: Spacebar to start/stop (desktop) or tap buttons (mobile) ⏱️
+* **Advanced Statistics**: Track ao5, ao12, ao100, DNF, best/worst times 📊
+* **Step-by-Step Mode**: Execute moves one at a time for learning 🎓
+* **Persistent History**: All your solves are saved locally 💾
+* **Mobile Optimized**: Responsive design for phones and DAPs 📱  
+
+## 🔬 The Scramble Logic: Functionally Infinite Practice
+
+This trainer utilizes a Seeded Random Move generator capable of producing **281 Trillion ($2^{48}$)** unique scramble sequences.
+
+* **Why not 43 Quintillion?** While the total theoretical permutations of a 3x3 cube are $\approx 43$ quintillion, our system provides a "functionally infinite" experience tailored for reproducibility.
+* **The Scale:** At a rate of one solve per second, it would take a user 8.9 million years to encounter every scramble in this app. ⏳
+* **The Benefit:** By using a 48-bit seed system, every scramble is assigned a **Unique Hex ID**. This allows you to share a specific, difficult scramble with a friend simply by sending them the ID. 🔢
+* **Quality Control:** The algorithm ensures no "illegal" move cancellations (e.g., $R$ followed by $R^\prime$) occur, ensuring every sequence is a valid, high-quality scramble. ✅   
 
 ## 📥 Download
 
@@ -43,7 +53,7 @@ chmod +x Rubiks-Cube-Trainer-*.AppImage
 * Open the APK file to install
 * **Note**: Some devices perform double security checks - this is normal, wait for both to complete
 
-**Requirements**: Android 7.0+ (API 24+), WebGL support
+**Requirements**: Android 5.0+ (API 21+), WebGL support
 
 ## ⌨️ Keyboard Shortcuts
 
@@ -93,11 +103,11 @@ cd android && ./gradlew assembleDebug
 
 ## 🧰 Tech Stack
 
-* **Frontend**: React + TypeScript
-* **3D Graphics**: Three.js
-* **Desktop**: Electron
-* **Mobile**: Capacitor
-* **Styling**: Tailwind CSS
+* **Frontend**: React + TypeScript ⚛️
+* **3D Graphics**: Three.js (WebGL Engine) 🎮
+* **Desktop**: Electron 💻
+* **Mobile**: Capacitor (Native Bridge for Android) 🤖
+* **Styling**: Tailwind CSS 🎨
 
 ## 📱 Platforms
 
