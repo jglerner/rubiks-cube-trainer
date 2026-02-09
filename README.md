@@ -51,7 +51,7 @@ chmod +x Rubiks-Cube-Trainer-*.AppImage
 * Download `Rubiks.Cube.Trainer.*.apk` from **Releases**
 * Enable "Install from Unknown Sources" in Settings → Security
 * Open the APK file to install
-* **Note**: Some devices perform double security checks - this is normal, wait for both to complete
+* **Note**: Some devices perform double security checks - this is normal, wait for boot to complete
 
 **Requirements**: Android 5.0+ (API 21+), WebGL support
 
