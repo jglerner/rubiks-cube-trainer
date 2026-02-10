@@ -20,44 +20,35 @@ const App = () => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const startTimeRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
-  const [solveTimes, setSolveTimes] = useState<Array<{time: number, type: 'normal' | 'dnf'}>>([]);
+  const [solveTimes, setSolveTimes] = useState<Array<{time: number, type: 'normal' | 'dnf', penalty?: number}>>([]);
+  const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
+  const [allTimeSolveTimes, setAllTimeSolveTimes] = useState<Array<{time: number, type: 'normal' | 'dnf', penalty?: number}>>([]);
+  const [statsPosition, setStatsPosition] = useState({ x: 16, y: Math.max(20, window.innerHeight - 670) });  
+  const [isDraggingStats, setIsDraggingStats] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [cubeSize, setCubeSize] = useState(300);
-
-  // Detect mobile and set cube size
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      // Responsive cube sizing
-      const size = Math.min(window.innerWidth - 40, window.innerHeight * 0.35, 600);
-      setCubeSize(Math.max(size, 250)); // Minimum 250px
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  const [timerPosition, setTimerPosition] = useState({ x: 220, y: Math.max(20, window.innerHeight - 280) });
+  const [isDraggingTimer, setIsDraggingTimer] = useState(false);
+  const [timerDragOffset, setTimerDragOffset] = useState({ x: 0, y: 0 });
 
   const moves = [
-    { label: 'U', desc: 'Top ↻', face: 'U', turns: 1 },
-    { label: "U'", desc: 'Top ↺', face: 'U', turns: -1 },
+    { label: 'U', desc: 'Top clockwise', face: 'U', turns: 1 },
+    { label: "U'", desc: 'Top counter-clockwise', face: 'U', turns: -1 },
     { label: 'U2', desc: 'Top 180°', face: 'U', turns: 2 },
-    { label: 'D', desc: 'Bottom ↻', face: 'D', turns: 1 },
-    { label: "D'", desc: 'Bottom ↺', face: 'D', turns: -1 },
+    { label: 'D', desc: 'Bottom clockwise', face: 'D', turns: 1 },
+    { label: "D'", desc: 'Bottom counter-clockwise', face: 'D', turns: -1 },
     { label: 'D2', desc: 'Bottom 180°', face: 'D', turns: 2 },
-    { label: 'R', desc: 'Right ↻', face: 'R', turns: 1 },
-    { label: "R'", desc: 'Right ↺', face: 'R', turns: -1 },
+    { label: 'R', desc: 'Right clockwise', face: 'R', turns: 1 },
+    { label: "R'", desc: 'Right counter-clockwise', face: 'R', turns: -1 },
     { label: 'R2', desc: 'Right 180°', face: 'R', turns: 2 },
-    { label: 'L', desc: 'Left ↻', face: 'L', turns: 1 },
-    { label: "L'", desc: 'Left ↺', face: 'L', turns: -1 },
+    { label: 'L', desc: 'Left clockwise', face: 'L', turns: 1 },
+    { label: "L'", desc: 'Left counter-clockwise', face: 'L', turns: -1 },
     { label: 'L2', desc: 'Left 180°', face: 'L', turns: 2 },
-    { label: 'F', desc: 'Front ↻', face: 'F', turns: 1 },
-    { label: "F'", desc: 'Front ↺', face: 'F', turns: -1 },
+    { label: 'F', desc: 'Front clockwise', face: 'F', turns: 1 },
+    { label: "F'", desc: 'Front counter-clockwise', face: 'F', turns: -1 },
     { label: 'F2', desc: 'Front 180°', face: 'F', turns: 2 },
-    { label: 'B', desc: 'Back ↻', face: 'B', turns: 1 },
-    { label: "B'", desc: 'Back ↺', face: 'B', turns: -1 },
+    { label: 'B', desc: 'Back clockwise', face: 'B', turns: 1 },
+    { label: "B'", desc: 'Back counter-clockwise', face: 'B', turns: -1 },
     { label: 'B2', desc: 'Back 180°', face: 'B', turns: 2 },
   ];
 
@@ -68,14 +59,15 @@ const App = () => {
     scene.background = new THREE.Color(0x2a2a3e);
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(45, 600 / 600, 0.1, 1000);
     camera.position.set(7, 7, 7);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.outputEncoding = 3001;
-    renderer.setSize(cubeSize, cubeSize);
+    //renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.outputEncoding = 3001; // sRGB encoding
+    renderer.setSize(600, 600);
     mountRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -93,7 +85,12 @@ const App = () => {
     groupRef.current = cubeGroup;
 
     const faceColors = [
-      0xCC0000, 0xFF8800, 0xF5F5F5, 0xFFD700, 0x00AA00, 0x0000CC
+  0xCC0000,  // Right - Red (slightly darker)
+  0xFF8800,  // Left - Orange (more natural orange)
+  0xF5F5F5,  // Top - White (slightly off-white)
+  0xFFD700,  // Bottom - Yellow (gold yellow)
+  0x00AA00,  // Front - Green (brighter, more natural)
+  0x0000CC   // Back - Blue (true blue, not lavender)
     ];
     
     const cubes: any[] = [];
@@ -134,54 +131,34 @@ const App = () => {
     updateCubeState();
 
     let isDragging = false;
-    let previousTouch = { x: 0, y: 0 };
+    let previousMouse = { x: 0, y: 0 };
 
-    const onStart = (clientX: number, clientY: number) => {
+    const onMouseDown = (e: MouseEvent) => {
       isDragging = true;
-      previousTouch = { x: clientX, y: clientY };
+      previousMouse = { x: e.clientX, y: e.clientY };
     };
 
-    const onMove = (clientX: number, clientY: number) => {
+    const onMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       
-      const deltaX = clientX - previousTouch.x;
-      const deltaY = clientY - previousTouch.y;
+      const deltaX = e.clientX - previousMouse.x;
+      const deltaY = e.clientY - previousMouse.y;
 
       cubeGroup.rotation.y += deltaX * 0.01;
       cubeGroup.rotation.x += deltaY * 0.01;
 
-      previousTouch = { x: clientX, y: clientY };
+      previousMouse = { x: e.clientX, y: e.clientY };
     };
 
-    const onEnd = () => {
+    const onMouseUp = () => {
       isDragging = false;
-    };
-
-    // Mouse events
-    const onMouseDown = (e: MouseEvent) => onStart(e.clientX, e.clientY);
-    const onMouseMove = (e: MouseEvent) => onMove(e.clientX, e.clientY);
-
-    // Touch events
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        onStart(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      if (e.touches.length > 0) {
-        onMove(e.touches[0].clientX, e.touches[0].clientY);
-      }
     };
 
     const canvas = renderer.domElement;
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('mouseup', onEnd);
-    canvas.addEventListener('mouseleave', onEnd);
-    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-    canvas.addEventListener('touchend', onEnd);
+    canvas.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('mouseleave', onMouseUp);
 
     const animate = () => {
       animationRef.current = requestAnimationFrame(animate);
@@ -197,16 +174,13 @@ const App = () => {
       }
       canvas.removeEventListener('mousedown', onMouseDown);
       canvas.removeEventListener('mousemove', onMouseMove);
-      canvas.removeEventListener('mouseup', onEnd);
-      canvas.removeEventListener('mouseleave', onEnd);
-      canvas.removeEventListener('touchstart', onTouchStart);
-      canvas.removeEventListener('touchmove', onTouchMove);
-      canvas.removeEventListener('touchend', onEnd);
+      canvas.removeEventListener('mouseup', onMouseUp);
+      canvas.removeEventListener('mouseleave', onMouseUp);
       if (mountRef.current && renderer.domElement) {
         mountRef.current.removeChild(renderer.domElement);
       }
     };
-  }, [cubeSize]);
+  }, []);
 
   const rotateFace = (face: string, turns: number) => {
     const cubes = cubesRef.current;
@@ -285,30 +259,35 @@ const App = () => {
         const idx = row * 3 + col;
         state.U[idx] = getColorInDirection(mesh, new THREE.Vector3(0, 1, 0));
       }
+      
       if (pos.y === -1) {
         const col = -pos.x + 1;
         const row = pos.z + 1;
         const idx = row * 3 + col;
         state.D[idx] = getColorInDirection(mesh, new THREE.Vector3(0, -1, 0));
       }
+      
       if (pos.z === 1) {
         const col = pos.x + 1;
         const row = -pos.y + 1;
         const idx = row * 3 + col;
         state.F[idx] = getColorInDirection(mesh, new THREE.Vector3(0, 0, 1));
       }
+      
       if (pos.z === -1) {
         const col = -pos.x + 1;
         const row = -pos.y + 1;
         const idx = row * 3 + col;
         state.B[idx] = getColorInDirection(mesh, new THREE.Vector3(0, 0, -1));
       }
+      
       if (pos.x === -1) {
         const row = -pos.y + 1;
         const col = pos.z + 1;
         const idx = row * 3 + col;
         state.L[idx] = getColorInDirection(mesh, new THREE.Vector3(-1, 0, 0));
       }
+      
       if (pos.x === 1) {
         const col = -pos.z + 1;
         const row = -pos.y + 1;
@@ -406,7 +385,7 @@ const App = () => {
   const loadScrambleById = () => {
     const id = parseInt(customId, 16);
     if (isNaN(id) || id < 0 || id > 0xFFFFFFFFFFFF) {
-      alert('Invalid hex ID');
+      alert('Please enter a valid hex ID (0x000000000000 to 0xFFFFFFFFFFFF)');
       return;
     }
     generateFromSeed(id);
@@ -416,8 +395,10 @@ const App = () => {
     twoMoveSequence.forEach(move => {
       const face = move[0];
       let turns = 1;
+      
       if (move.includes('2')) turns = 2;
       else if (move.includes("'")) turns = -1;
+      
       executeMove(face, turns);
     });
     setCurrentMoveIndex(twoMoveSequence.length - 1);
@@ -429,8 +410,10 @@ const App = () => {
       const move = twoMoveSequence[nextIndex];
       const face = move[0];
       let turns = 1;
+      
       if (move.includes('2')) turns = 2;
       else if (move.includes("'")) turns = -1;
+      
       executeMove(face, turns);
       setCurrentMoveIndex(nextIndex);
     }
@@ -496,11 +479,15 @@ const App = () => {
 
   const calculateAverage = (solves: Array<{time: number, type: string}>, count: number) => {
     const normalSolves = solves.filter(s => s.type === 'normal').map(s => s.time);
+    
     if (normalSolves.length < count) return null;
+    
     const lastN = normalSolves.slice(-count);
     const sorted = [...lastN].sort((a, b) => a - b);
+    
     const trimmed = sorted.slice(1, -1);
     const avg = trimmed.reduce((sum, time) => sum + time, 0) / trimmed.length;
+    
     return avg;
   };
 
@@ -543,7 +530,7 @@ const App = () => {
           }
         }
       } catch (error) {
-        console.log('No previous history found');
+        console.log('No previous history found or error loading:', error);
       } finally {
         setIsLoadingHistory(false);
       }
@@ -562,7 +549,7 @@ const App = () => {
   }, [solveTimes, isLoadingHistory]);
 
   const clearHistory = () => {
-    if (confirm('Clear all solve history?')) {
+    if (confirm('Are you sure you want to clear all solve history? This cannot be undone.')) {
       setSolveTimes([]);
       try {
         localStorage.removeItem('cube-solve-times');
@@ -572,52 +559,159 @@ const App = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-2 md:p-6">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 text-center">
-          Rubik's Cube Trainer
-        </h1>
+  const addPenalty = () => {
+    if (solveTimes.length === 0) return;
+    setSolveTimes(prev => {
+      const updated = [...prev];
+      const lastIndex = updated.length - 1;
+      updated[lastIndex] = { ...updated[lastIndex], penalty: (updated[lastIndex].penalty || 0) + 2 };
+      return updated;
+    });
+    setAllTimeSolveTimes(prev => {
+      const updated = [...prev];
+      const lastIndex = updated.length - 1;
+      if (lastIndex >= 0) {
+        updated[lastIndex] = { ...updated[lastIndex], penalty: (updated[lastIndex].penalty || 0) + 2 };
+      }
+      return updated;
+    });
+  };
 
-        {/* Cube Display */}
-        <div className="bg-slate-800 rounded-lg p-3 md:p-6 shadow-2xl mb-3">
-          <div className="flex justify-center mb-2">
+  const getTodayMean = () => {
+    const normalSolves = solveTimes.filter(s => s.type === 'normal');
+    if (normalSolves.length === 0) return null;
+    const total = normalSolves.reduce((sum, s) => sum + s.time + (s.penalty || 0), 0);
+    return total / normalSolves.length;
+  };
+
+  const getAllTimeMean = () => {
+    const normalSolves = allTimeSolveTimes.filter(s => s.type === 'normal');
+    if (normalSolves.length === 0) return null;
+    const total = normalSolves.reduce((sum, s) => sum + s.time + (s.penalty || 0), 0);
+    return total / normalSolves.length;
+  };
+
+  const resetToday = () => {
+    if (confirm('Reset today\'s session?')) {
+      setSolveTimes([]);
+      setSessionStartTime(Date.now());
+    }
+  };
+
+  const resetAllTime = () => {
+    if (confirm('Reset all-time statistics?')) {
+      setAllTimeSolveTimes([]);
+      localStorage.removeItem('cube-all-time-solve-times');
+    }
+  };
+
+  const resetAll = () => {
+    if (confirm('Reset EVERYTHING?')) {
+      setSolveTimes([]);
+      setAllTimeSolveTimes([]);
+      setSessionStartTime(Date.now());
+      localStorage.removeItem('cube-solve-times');
+      localStorage.removeItem('cube-all-time-solve-times');
+    }
+  };
+
+  const handleStatsMouseDown = (e: React.MouseEvent) => {
+    setIsDraggingStats(true);
+    setDragOffset({
+      x: e.clientX - statsPosition.x,
+      y: e.clientY - statsPosition.y
+    });
+  };
+
+  const handleTimerMouseDown = (e: React.MouseEvent) => {
+    setIsDraggingTimer(true);
+    setTimerDragOffset({
+      x: e.clientX - timerPosition.x,
+      y: e.clientY - timerPosition.y
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDraggingStats) {
+        setStatsPosition({
+          x: e.clientX - dragOffset.x,
+          y: e.clientY - dragOffset.y
+        });
+      }
+      if (isDraggingTimer) {
+        setTimerPosition({
+          x: e.clientX - timerDragOffset.x,
+          y: e.clientY - timerDragOffset.y
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingStats(false);
+      setIsDraggingTimer(false);
+    };
+
+    if (isDraggingStats || isDraggingTimer) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingStats, isDraggingTimer, dragOffset, timerDragOffset]);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-6 relative">
+      <div className="max-w-5xl w-full">
+        <h1 className="text-5xl font-bold text-white mb-3 text-center">
+          Rubik's Cube Scrambler
+        </h1>
+        <p className="text-gray-300 text-center mb-8 text-lg">
+          Practice move sequences step by step
+        </p>
+
+        <div className="bg-slate-800 rounded-2xl p-8 shadow-2xl mb-6">
+          <div className="flex justify-center mb-4">
             <div 
               ref={mountRef} 
-              className="rounded-lg shadow-2xl bg-slate-900 touch-none" 
-              style={{ cursor: 'grab', width: cubeSize, height: cubeSize }}
+              className="rounded-xl shadow-2xl bg-slate-900" 
+              style={{ cursor: 'grab' }}
             />
           </div>
-          <div className="flex justify-center gap-2 text-xs md:text-sm">
-            <p className="text-gray-400">👆 Drag to rotate</p>
+          <div className="flex justify-center gap-4">
+            <p className="text-gray-400 text-center text-sm">
+              🖱️ Drag to rotate
+            </p>
             <button
               onClick={resetCube}
-              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs md:text-sm font-semibold rounded transition-all"
+              className="px-4 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-all"
             >
-              Reset
+              Reset Cube
             </button>
           </div>
         </div>
 
-        {/* Scramble Controls */}
-        <div className="bg-slate-800 rounded-lg p-3 md:p-6 shadow-2xl mb-3">
-          <h2 className="text-lg md:text-xl font-semibold text-white mb-3 text-center">
+        <div className="bg-slate-800 rounded-2xl p-8 shadow-2xl mb-6">
+          <h2 className="text-2xl font-semibold text-white mb-6 text-center">
             Sequence Practice
           </h2>
           
-          <div className="mb-4">
-            <label className="block text-white text-center mb-2 text-sm font-semibold">
-              Moves:
+          <div className="mb-6">
+            <label className="block text-white text-center mb-3 font-semibold">
+              Number of moves:
             </label>
-            <div className="flex flex-wrap justify-center gap-1 md:gap-2">
-              {[2, 5, 10, 15, 20, 25].map(num => (
+            <div className="flex justify-center gap-3">
+              {[2, 5, 10, 15, 18, 20, 25].map(num => (
                 <button
                   key={num}
                   onClick={() => setNumMoves(num)}
-                  className={`px-3 md:px-4 py-1 md:py-2 rounded text-sm md:text-base font-bold transition-all ${
+                  className={`px-6 py-2 rounded-lg font-bold transition-all ${
                     numMoves === num
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white scale-105'
-                      : 'bg-slate-700 text-gray-300'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg scale-110'
+                      : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
                   }`}
                 >
                   {num}
@@ -626,103 +720,136 @@ const App = () => {
             </div>
           </div>
 
-          <div className="text-center mb-4">
+          <div className="text-center mb-6">
             <button
               onClick={generateTwoMoves}
               disabled={!isReady}
-              className="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:from-gray-600 disabled:to-gray-600 text-white text-sm md:text-base font-bold rounded-lg shadow-xl transition-all"
+              className="px-8 py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-xl shadow-xl transition-all transform hover:scale-105 text-lg"
             >
-              Generate {numMoves} Moves
+              Generate Random {numMoves}-Move Sequence
             </button>
           </div>
 
           {scrambleId !== null && (
-            <div className="bg-slate-700 p-2 md:p-3 rounded-lg mb-3">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <span className="text-gray-300 text-xs md:text-sm font-semibold">ID:</span>
-                <code className="bg-slate-900 px-2 py-1 rounded text-green-400 font-mono text-xs md:text-sm">
-                  {scrambleId.toString(16).toUpperCase().padStart(12, '0')}
+            <div className="bg-slate-700 p-4 rounded-xl mb-4">
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <span className="text-gray-300 font-semibold">Scramble ID:</span>
+                <code className="bg-slate-900 px-4 py-2 rounded-lg text-green-400 font-mono text-lg">
+                  0x{scrambleId.toString(16).toUpperCase().padStart(12, '0')}
                 </code>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText('0x' + scrambleId.toString(16).toUpperCase().padStart(12, '0'));
                   }}
-                  className="px-2 py-1 bg-blue-600 text-white text-xs rounded"
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-all"
                 >
                   Copy
                 </button>
               </div>
+              <p className="text-gray-400 text-xs text-center">
+                Save this ID to reproduce this exact scramble later
+              </p>
             </div>
           )}
 
+          <div className="bg-slate-700 p-4 rounded-xl mb-6">
+            <label className="block text-white text-center mb-2 font-semibold text-sm">
+              Load Scramble by ID:
+            </label>
+            <div className="flex gap-2 justify-center">
+              <input
+                type="text"
+                value={customId}
+                onChange={(e) => setCustomId(e.target.value)}
+                placeholder="0x000000000000"
+                className="bg-slate-900 text-white px-4 py-2 rounded-lg font-mono w-56 text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={loadScrambleById}
+                disabled={!isReady}
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-bold rounded-lg transition-all"
+              >
+                Load
+              </button>
+            </div>
+            <p className="text-gray-400 text-xs text-center mt-2">
+              Enter hex ID (0x000000000000 to 0xFFFFFFFFFFFF) - 281,474,976,710,656 unique scrambles (281 trillion)
+            </p>
+          </div>
+
           {twoMoveSequence.length > 0 && (
             <div>
-              <div className="bg-gradient-to-r from-purple-900 to-blue-900 p-3 md:p-4 rounded-lg mb-3">
-                <div className="text-center mb-3">
-                  <div className="text-gray-300 text-sm md:text-base mb-2">
-                    {currentMoveIndex === -1 ? 'Ready' : 
+              <div className="bg-gradient-to-r from-purple-900 to-blue-900 p-6 rounded-xl mb-4">
+                <div className="text-center mb-4">
+                  <div className="text-gray-300 text-lg mb-2">
+                    {currentMoveIndex === -1 ? 'Ready to execute' : 
                      currentMoveIndex < twoMoveSequence.length - 1 ? `Move ${currentMoveIndex + 2}/${twoMoveSequence.length}` : 
-                     'Complete!'}
+                     'Sequence Complete!'}
                   </div>
                   {currentMoveIndex === -1 ? (
-                    <div className="bg-white rounded-lg px-6 py-3 inline-block">
-                      <span className="text-xl md:text-2xl text-gray-600 font-bold">Tap to start</span>
+                    <div className="bg-white rounded-2xl shadow-2xl px-12 py-6 inline-block">
+                      <span className="text-3xl text-gray-600 font-bold">Click to start</span>
                     </div>
                   ) : currentMoveIndex < twoMoveSequence.length - 1 ? (
-                    <div className="bg-white rounded-lg px-8 py-4 inline-block">
-                      <span className="text-4xl md:text-5xl font-bold bg-gradient-to-br from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    <div className="bg-white rounded-2xl shadow-2xl px-12 py-6 inline-block min-w-[120px]">
+                      <span className="text-6xl font-bold bg-gradient-to-br from-purple-600 to-pink-600 bg-clip-text text-transparent">
                         {twoMoveSequence[currentMoveIndex + 1]}
                       </span>
                     </div>
                   ) : (
-                    <div className="bg-white rounded-lg px-6 py-3 inline-block">
-                      <span className="text-2xl md:text-3xl text-green-600 font-bold">✓ Done!</span>
+                    <div className="bg-white rounded-2xl shadow-2xl px-12 py-6 inline-block">
+                      <span className="text-4xl text-green-600 font-bold">✓ Done!</span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex justify-center gap-4">
                   <button
                     onClick={executeAllMoves}
                     disabled={currentMoveIndex !== -1}
-                    className="px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 disabled:bg-slate-700 disabled:opacity-40 text-white text-sm md:text-base font-bold rounded transition-all"
+                    className="px-8 py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:bg-slate-700 disabled:opacity-40 text-white font-bold rounded-lg transition-all text-lg shadow-xl"
                   >
-                    Execute All
+                    Execute All Moves at Once
                   </button>
                   <button
                     onClick={nextMove}
                     disabled={currentMoveIndex >= twoMoveSequence.length - 1}
-                    className="px-4 py-2 bg-blue-600 disabled:bg-slate-700 disabled:opacity-40 text-white text-sm md:text-base font-bold rounded transition-all"
+                    className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:opacity-40 text-white font-bold rounded-lg transition-all text-lg"
                   >
-                    Next Move →
+                    Execute Next Move →
                   </button>
                 </div>
               </div>
 
               {currentMoveIndex >= 0 && (
-                <div className="mb-3">
-                  <div className="w-full bg-slate-700 rounded-full h-2">
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm text-gray-300 mb-2">
+                    <span>Progress</span>
+                    <span>{currentMoveIndex + 1} / {twoMoveSequence.length}</span>
+                  </div>
+                  <div className="w-full bg-slate-700 rounded-full h-3">
                     <div 
-                      className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all"
+                      className="bg-gradient-to-r from-green-500 to-blue-500 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${((currentMoveIndex + 1) / twoMoveSequence.length) * 100}%` }}
                     ></div>
                   </div>
                 </div>
               )}
 
-              <div className="bg-slate-900 p-3 rounded-lg">
-                <div className="flex flex-wrap gap-1 md:gap-2 justify-center">
+              <div className="bg-slate-900 p-6 rounded-xl">
+                <h3 className="text-white font-semibold mb-3 text-center">Full Sequence:</h3>
+                <div className="flex flex-wrap gap-2 justify-center">
                   {twoMoveSequence.map((move, index) => (
                     <span 
                       key={index}
-                      className={`inline-flex items-center justify-center font-bold px-2 md:px-3 py-1 md:py-2 rounded text-xs md:text-sm ${
+                      className={`inline-flex items-center justify-center font-bold px-4 py-2 rounded-lg shadow-lg min-w-[3rem] transition-all ${
                         currentMoveIndex === twoMoveSequence.length - 1
-                          ? 'bg-green-600 text-white'
+                          ? 'bg-gradient-to-br from-green-600 to-green-700 text-white'
                           : index <= currentMoveIndex 
-                          ? 'bg-green-600 text-white opacity-60' 
+                          ? 'bg-gradient-to-br from-green-600 to-green-700 text-white opacity-60' 
                           : index === currentMoveIndex + 1
-                          ? 'bg-purple-600 text-white scale-110'
-                          : 'bg-slate-600 text-gray-300'
+                          ? 'bg-gradient-to-br from-purple-600 to-pink-600 text-white scale-110 ring-4 ring-yellow-400'
+                          : 'bg-gradient-to-br from-slate-600 to-slate-700 text-gray-300'
                       }`}
                     >
                       {move}
@@ -734,110 +861,295 @@ const App = () => {
           )}
         </div>
 
-        {/* Timer */}
-        <div className="bg-slate-800 p-3 md:p-4 rounded-lg shadow-2xl mb-3">
-          <div className="text-white text-sm font-semibold mb-2 text-center">Timer</div>
-          <div className="bg-slate-900 px-4 py-2 rounded-lg mb-2">
-            <div className="text-3xl md:text-4xl font-bold text-center bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent font-mono">
-              {formatTime(elapsedTime)}
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                if (!timerRunning) {
-                  setTimerRunning(true);
-                  startTimeRef.current = Date.now() - elapsedTime;
-                } else {
-                  setTimerRunning(false);
-                  if (elapsedTime > 0) {
-                    setSolveTimes(prev => [...prev, { time: elapsedTime, type: 'normal' }]);
-                  }
-                }
-              }}
-              className={`flex-1 px-3 py-2 text-sm font-semibold rounded transition-all ${
-                timerRunning 
-                  ? 'bg-red-600 text-white' 
-                  : 'bg-green-600 text-white'
-              }`}
-            >
-              {timerRunning ? 'Stop' : 'Start'}
-            </button>
-            <button
-              onClick={resetTimer}
-              className="px-3 py-2 bg-slate-600 text-white text-sm font-semibold rounded transition-all"
-            >
-              Reset
-            </button>
-            <button
-              onClick={recordDNF}
-              disabled={timerRunning}
-              className="px-3 py-2 bg-orange-600 disabled:bg-gray-600 disabled:opacity-40 text-white text-sm font-bold rounded transition-all"
-            >
-              DNF
-            </button>
-          </div>
-        </div>
-
-        {/* Statistics */}
-        <div className="bg-slate-800 p-3 md:p-4 rounded-lg shadow-2xl mb-3">
-          <div className="text-white text-sm font-semibold mb-2 text-center">Statistics</div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <div className="bg-slate-900 p-2 rounded text-center">
-              <div className="text-xs text-gray-400">Last</div>
-              <div className="text-lg md:text-xl font-bold text-white font-mono">
-                {getLastSolve() === 'DNF' ? 'DNF' : getLastSolve() ? formatTime(getLastSolve() as number) : '--'}
-              </div>
-            </div>
-            <div className="bg-slate-900 p-2 rounded text-center">
-              <div className="text-xs text-gray-400">Best</div>
-              <div className="text-lg md:text-xl font-bold text-yellow-400 font-mono">
-                {getBestSolve() ? formatTime(getBestSolve()!) : '--'}
-              </div>
-            </div>
-            <div className="bg-slate-900 p-2 rounded text-center">
-              <div className="text-xs text-gray-400">ao5</div>
-              <div className="text-lg md:text-xl font-bold text-green-400 font-mono">
-                {getAo5() ? formatTime(getAo5()!) : '--'}
-              </div>
-            </div>
-            <div className="bg-slate-900 p-2 rounded text-center">
-              <div className="text-xs text-gray-400">ao12</div>
-              <div className="text-lg md:text-xl font-bold text-blue-400 font-mono">
-                {getAo12() ? formatTime(getAo12()!) : '--'}
-              </div>
-            </div>
-          </div>
-          <div className="text-xs text-gray-400 text-center mt-2">
-            Total: {solveTimes.length} ({getDNFCount()} DNF)
-          </div>
-          <button
-            onClick={clearHistory}
-            className="w-full mt-2 px-3 py-1 bg-red-600 text-white text-xs font-semibold rounded transition-all"
-          >
-            Clear History
-          </button>
-        </div>
-
-        {/* Move Controls - Collapsed on mobile */}
-        <details className="bg-slate-800 rounded-lg shadow-2xl mb-3">
-          <summary className="p-3 md:p-4 text-white text-sm md:text-base font-semibold cursor-pointer">
-            Manual Controls (Tap to expand)
-          </summary>
-          <div className="p-3 md:p-4 grid grid-cols-3 md:grid-cols-6 gap-1 md:gap-2">
+        <div className="bg-slate-800 rounded-2xl p-8 shadow-2xl">
+          <h2 className="text-2xl font-semibold text-white mb-6 text-center">
+            Single Move Testing
+          </h2>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {moves.map((move, index) => (
               <button
                 key={index}
                 onClick={() => executeMove(move.face, move.turns)}
                 disabled={!isReady}
-                className="bg-blue-600 disabled:bg-gray-600 text-white p-2 rounded text-xs md:text-sm"
+                className="bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 text-white p-4 rounded-xl shadow-lg transition-all transform hover:scale-105 disabled:cursor-not-allowed"
               >
-                <div className="font-bold">{move.label}</div>
-                <div className="text-xs opacity-90">{move.desc}</div>
+                <div className="text-3xl font-bold mb-1">{move.label}</div>
+                <div className="text-sm opacity-90">{move.desc}</div>
               </button>
             ))}
           </div>
-        </details>
+
+          <div className="mt-8 bg-gradient-to-r from-slate-700 to-slate-600 p-5 rounded-xl">
+            <h3 className="text-lg font-semibold text-white mb-3">Color Reference:</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-white border-2 border-gray-400 rounded"></div>
+                <span><span className="font-bold">U</span> = Top (White)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-yellow-400 border-2 border-gray-400 rounded"></div>
+                <span><span className="font-bold">D</span> = Bottom (Yellow)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-green-500 border-2 border-gray-400 rounded"></div>
+                <span><span className="font-bold">F</span> = Front (Green)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-blue-600 border-2 border-gray-400 rounded"></div>
+                <span><span className="font-bold">B</span> = Back (Blue)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-orange-500 border-2 border-gray-400 rounded"></div>
+                <span><span className="font-bold">L</span> = Left (Orange)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-red-600 border-2 border-gray-400 rounded"></div>
+                <span><span className="font-bold">R</span> = Right (Red)</span>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-slate-500 text-sm text-gray-200">
+              <p><span className="font-bold">Move notation:</span> No mark = 90° clockwise, ' = 90° counter-clockwise, 2 = 180°</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div 
+        className="fixed bg-slate-800 p-4 rounded-xl shadow-2xl border-2 border-slate-600 cursor-move hover:border-blue-500 transition-colors"
+        style={{ 
+          left: `${timerPosition.x}px`, 
+          top: `${timerPosition.y}px`,
+          userSelect: 'none'
+        }}
+        onMouseDown={handleTimerMouseDown}
+      >
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+          </svg>
+          <div className="text-white text-xs font-semibold text-center">Timer</div>
+        </div>
+        <div className="bg-slate-900 px-6 py-3 rounded-lg">
+          <div className="text-5xl font-bold text-center bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent font-mono">
+            {formatTime(elapsedTime)}
+          </div>
+          <div className="text-xs text-gray-400 text-center mt-2">seconds</div>
+        </div>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => {
+              if (!timerRunning) {
+                setTimerRunning(true);
+                startTimeRef.current = Date.now() - elapsedTime;
+              } else {
+                setTimerRunning(false);
+                if (elapsedTime > 0) {
+                  setSolveTimes(prev => [...prev, { time: elapsedTime, type: 'normal' }]);
+                }
+              }
+            }}
+            className={`flex-1 px-3 py-1 text-sm font-semibold rounded-lg transition-all ${
+              timerRunning 
+                ? 'bg-red-600 hover:bg-red-700 text-white' 
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+          >
+            {timerRunning ? 'Stop' : 'Start'}
+          </button>
+          <button
+            onClick={resetTimer}
+            className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm font-semibold rounded-lg transition-all"
+          >
+            Reset
+          </button>
+        </div>
+        <button
+          onClick={recordDNF}
+          disabled={timerRunning}
+          className="w-full mt-2 px-3 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:opacity-40 text-white text-sm font-bold rounded-lg transition-all"
+        >
+          DNF
+        </button>
+        <div className="text-xs text-gray-400 text-center mt-2">
+          Press <kbd className="bg-slate-700 px-2 py-1 rounded text-white">Space</kbd> to start/stop, <kbd className="bg-slate-700 px-2 py-1 rounded text-white">R</kbd> to reset
+        </div>
+      </div>
+
+      <div 
+        className="fixed bg-slate-800 p-4 rounded-xl shadow-2xl border-2 border-slate-600 cursor-move hover:border-blue-500 transition-colors"
+        style={{ 
+          left: `${statsPosition.x}px`, 
+          top: `${statsPosition.y}px`,
+          userSelect: 'none'
+        }}
+        onMouseDown={handleStatsMouseDown}
+      >
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+          </svg>
+          <div className="text-white text-xs font-semibold text-center">Statistics</div>
+        </div>
+        <div className="flex flex-col gap-3">
+          <div className="bg-slate-900 px-6 py-2 rounded-lg text-center">
+            <div className="text-xs text-gray-400 mb-1">Last</div>
+            <div className="text-2xl font-bold text-white font-mono">
+              {getLastSolve() === 'DNF' ? 'DNF' : getLastSolve() ? formatTime(getLastSolve() as number) : '--:---'}
+            </div>
+          </div>
+          <div className="bg-slate-900 px-6 py-2 rounded-lg text-center">
+            <div className="text-xs text-gray-400 mb-1">Best</div>
+            <div className="text-2xl font-bold text-yellow-400 font-mono">
+              {getBestSolve() ? formatTime(getBestSolve()!) : '--:---'}
+            </div>
+          </div>
+          <div className="bg-slate-900 px-6 py-2 rounded-lg text-center">
+            <div className="text-xs text-gray-400 mb-1">Worst</div>
+            <div className="text-2xl font-bold text-red-400 font-mono">
+              {getWorstSolve() ? formatTime(getWorstSolve()!) : '--:---'}
+            </div>
+          </div>
+          <div className="bg-slate-900 px-6 py-2 rounded-lg text-center">
+            <div className="text-xs text-gray-400 mb-1">DNF</div>
+            <div className="text-2xl font-bold text-orange-400 font-mono">
+              {getDNFCount()}
+            </div>
+          </div>
+          <div className="bg-slate-900 px-6 py-2 rounded-lg text-center">
+            <div className="text-xs text-gray-400 mb-1">ao5</div>
+            <div className="text-2xl font-bold text-green-400 font-mono">
+              {getAo5() ? formatTime(getAo5()!) : '--:---'}
+            </div>
+          </div>
+          <div className="bg-slate-900 px-6 py-2 rounded-lg text-center">
+            <div className="text-xs text-gray-400 mb-1">ao12</div>
+            <div className="text-2xl font-bold text-blue-400 font-mono">
+              {getAo12() ? formatTime(getAo12()!) : '--:---'}
+            </div>
+          </div>
+          <div className="bg-slate-900 px-6 py-2 rounded-lg text-center">
+            <div className="text-xs text-gray-400 mb-1">ao100</div>
+            <div className="text-2xl font-bold text-purple-400 font-mono">
+              {getAo100() ? formatTime(getAo100()!) : '--:---'}
+            </div>
+          </div>
+        </div>
+        <div className="text-xs text-gray-400 text-center mt-3">
+                    {/* Session Stats */}
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="bg-slate-700 p-2 rounded text-center">
+              <div className="text-xs text-gray-400">Today's Mean</div>
+              <div className="text-sm font-bold text-yellow-400 font-mono">
+                {getTodayMean() ? formatTime(getTodayMean()!) : '--'}
+              </div>
+            </div>
+            <div className="bg-slate-700 p-2 rounded text-center">
+              <div className="text-xs text-gray-400">All-Time Mean</div>
+              <div className="text-sm font-bold text-purple-400 font-mono">
+                {getAllTimeMean() ? formatTime(getAllTimeMean()!) : '--'}
+              </div>
+            </div>
+          </div>
+          <div className="text-xs text-gray-400 text-center mb-2">
+            Today: {solveTimes.length} | All-Time: {allTimeSolveTimes.length} ({getDNFCount()} DNF)
+          </div>
+          <button
+            onClick={addPenalty}
+            disabled={solveTimes.length === 0}
+            className="w-full mb-2 px-3 py-2 bg-orange-600 disabled:bg-gray-600 text-white text-sm font-semibold rounded transition-all"
+          >
+            +2s Penalty
+          </button>
+          <div className="grid grid-cols-3 gap-1 mb-2">
+            <button onClick={resetToday} className="px-2 py-1 bg-yellow-600 text-white text-xs rounded">
+              Reset Today
+            </button>
+            <button onClick={resetAllTime} className="px-2 py-1 bg-purple-600 text-white text-xs rounded">
+              Reset All-Time
+            </button>
+            <button onClick={resetAll} className="px-2 py-1 bg-red-600 text-white text-xs rounded">
+              Reset All
+            </button>
+          </div>
+
+        </div>
+        <button
+          onClick={clearHistory}
+          className="w-full mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-all"
+        >
+          Clear History
+        </button>
+      </div>
+
+      <div className="fixed bottom-4 right-4 bg-slate-800 p-4 rounded-xl shadow-2xl border-2 border-slate-600">
+        <div className="text-white text-xs font-semibold mb-2 text-center">Scramble</div>
+        {cubeState && (
+          <svg width="240" height="180" viewBox="0 0 240 180">
+            {(() => {
+              const cellSize = 20;
+              const gap = 1;
+              
+              const colorFill = (colorCode: string) => {
+                const colors: {[key: string]: string} = {
+                  'U': '#ffffff',
+                  'D': '#ffff00',
+                  'L': '#ff6600',
+                  'R': '#ff0000',
+                  'F': '#00dd00',
+                  'B': '#0000ff'
+                };
+                return colors[colorCode] || '#888888';
+              };
+
+              const renderFace = (face: string, offsetX: number, offsetY: number) => {
+                const faceData = cubeState[face];
+                if (!faceData) return null;
+                
+                return (
+                  <g key={face}>
+                    {faceData.map((color: string, idx: number) => {
+                      let row = Math.floor(idx / 3);
+                      let col = idx % 3;
+                      
+                      if (face === 'U' || face === 'D') {
+                        row = 2 - row;
+                        col = 2 - col;
+                      }
+                      
+                      const x = offsetX + col * (cellSize + gap);
+                      const y = offsetY + row * (cellSize + gap);
+                      
+                      return (
+                        <rect
+                          key={idx}
+                          x={x}
+                          y={y}
+                          width={cellSize}
+                          height={cellSize}
+                          fill={colorFill(color)}
+                          stroke="black"
+                          strokeWidth="2"
+                        />
+                      );
+                    })}
+                  </g>
+                );
+              };
+
+              return (
+                <>
+                  {renderFace('U', 60, 0)}
+                  {renderFace('L', 0, 60)}
+                  {renderFace('F', 60, 60)}
+                  {renderFace('R', 120, 60)}
+                  {renderFace('B', 180, 60)}
+                  {renderFace('D', 60, 120)}
+                </>
+              );
+            })()}
+          </svg>
+        )}
       </div>
     </div>
   );
