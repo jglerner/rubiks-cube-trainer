@@ -3,7 +3,7 @@
   "productName": "Rubiks Cube Trainer",
   "directories": {
     "output": "release",
-    "buildResources": "public"
+    "buildResources": "build-resources"
   },
   "files": [
     "dist/**/*",
@@ -15,14 +15,17 @@
     "main": "electron/main.cjs"
   },
   "linux": {
-    "target": ["AppImage", "deb"],
-    "category": "Education"
+    "target": ["AppImage"],
+    "category": "Education",
+    "icon": "build-resources/icon.png"
   },
   "win": {
-    "target": ["nsis", "portable"]
+    "target": ["nsis", "portable"],
+    "icon": "build-resources/icon.ico"
   },
   "mac": {
     "target": ["dmg"],
-    "category": "public.app-category.education"
+    "category": "public.app-category.education",
+    "icon": "build-resources/icon.icns"
   }
 }

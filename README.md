@@ -1,8 +1,8 @@
 # Rubik's Cube Trainer
 
 **📢 Latest Update:**
-- **v0.1.0.2 (Android only)**: Fixed compact layout for small-screen DAP devices, added new Rubik's cube icon, resolved CSS optimization issues. Rebuilt with updated Capacitor toolchain.
-- **v0.1.0 (Desktop)**: Native performance tuning, improved controls, and battery optimization. All desktop binaries remain stable at v0.1.0.
+- **v0.1.2 (Desktop)**: Added penalty system (+2s), session tracking (Today's Mean, All-Time Mean), reset options, and new Rubik's cube icon with transparent background.
+- **v0.1.0.2 (Android)**: Fixed compact layout for small-screen DAP devices, added new Rubik's cube icon, resolved CSS optimization issues.
 
 A modern cross-platform application for practicing Rubik's Cube with an integrated timer, comprehensive statistics, and 281 trillion unique scrambles.
 
@@ -12,6 +12,8 @@ A modern cross-platform application for practicing Rubik's Cube with an integrat
 - **Smart Scrambler**: Generate 2-25 move sequences with unique reproducible IDs 🔢
 - **Professional Timer**: Spacebar to start/stop (desktop) or tap buttons (mobile) ⏱️
 - **Advanced Statistics**: Track ao5, ao12, ao100, DNF, best/worst times 📊
+- **Penalty System**: Add +2s penalties for WCA-style timing ⏲️
+- **Session Tracking**: Today's Mean and All-Time Mean statistics 📈
 - **Step-by-Step Mode**: Execute moves one at a time for learning 🎓
 - **Persistent History**: All your solves are saved locally 💾
 - **Mobile Optimized**: Responsive design for phones and DAPs 📱
@@ -28,6 +30,8 @@ This trainer utilizes a **Seeded Random Move** generator capable of producing **
 ## 📥 Download
 
 ### Linux (All Distros)
+**Current Version: v0.1.2**
+
 Download the latest AppImage from [Releases](https://github.com/jglerner/rubiks-cube-trainer/releases)
 ```bash
 chmod +x Rubiks-Cube-Trainer-*.AppImage
@@ -35,6 +39,8 @@ chmod +x Rubiks-Cube-Trainer-*.AppImage
 ```
 
 ### Windows
+**Current Version: v0.1.0**
+
 **Option 1: Installer (Recommended)**
 - Download `Rubiks.Cube.Trainer.Setup.*.exe` from [Releases](https://github.com/jglerner/rubiks-cube-trainer/releases)
 - Run the installer and follow the prompts
@@ -44,6 +50,8 @@ chmod +x Rubiks-Cube-Trainer-*.AppImage
 - Run directly (no installation needed)
 
 ### macOS
+**Current Version: v0.1.0**
+
 - Download `Rubiks-Cube-Trainer-*-mac.zip` from [Releases](https://github.com/jglerner/rubiks-cube-trainer/releases)
 - Extract and drag to Applications folder
 - Note: You may need to allow the app in System Preferences → Security & Privacy
@@ -55,13 +63,6 @@ chmod +x Rubiks-Cube-Trainer-*.AppImage
 - Enable "Install from Unknown Sources" in Settings → Security
 - Open the APK file to install
 - Note: Some devices perform double security checks - this is normal, wait for boot to complete
-
-**v0.1.0.2 Changes (Android only):**
-- Fixed compact layout for DAP devices and small screens
-- Added new Rubik's cube app icon with optimized sizing
-- Resolved CSS class purging issues from build toolchain updates
-- Improved compatibility with updated Capacitor framework
-- Desktop versions remain stable at v0.1.0
 
 **Requirements:** Android 5.0+ (API 21+), WebGL support
 
@@ -84,6 +85,11 @@ Every scramble has a unique hex ID. Save and share specific scrambles with frien
 
 ### 281 Trillion Unique Scrambles
 Using seeded random generation for endless practice variety.
+
+### Session Statistics (v0.1.2+)
+- Track today's session separately from all-time stats
+- Add +2 second penalties for incomplete solves
+- Reset options: Today only, All-time only, or Everything
 
 ### Mobile-Optimized Experience
 - Touch-based cube rotation
@@ -121,10 +127,10 @@ cd android && ./gradlew assembleDebug
 
 ## 📱 Platforms
 
-✅ Linux - AppImage  
-✅ Windows - Installer & Portable  
-✅ macOS - DMG  
-✅ Android - APK
+✅ Linux - AppImage (v0.1.2)
+✅ Windows - Installer & Portable (v0.1.0)
+✅ macOS - DMG (v0.1.0)
+✅ Android - APK (v0.1.0.2)
 
 ## 📝 License
 
