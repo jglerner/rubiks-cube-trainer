@@ -1,0 +1,6 @@
+{
+  "appId": "com.jglerner.cubetrainer",
+  "appName": "Rubiks Trainer",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
